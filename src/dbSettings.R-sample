@@ -1,0 +1,25 @@
+###
+### Project:  NFL Sports Analytics 
+###
+### Url:      http://www.kalisch.biz
+###
+### File:     dbSettings.R
+###
+### Author:   Dominik P.H. Kalisch (dkalisch@trinity.edu)
+###
+### Desc.:    DB settings for the dbConnector(X).R scripts 
+###
+###
+### Modification history
+### ----------------------------------------------------------------------------
+###
+### Date        Version   Who                 Description
+### 2015-12-03  0.1       Dominik Kalisch     initial build
+###
+###
+
+host = 'localhost'  # Set the hostname or IP address
+port = '5432'  # Set the port the db server is listing at
+dbname = 'NAME_OF_DB'  # Define which databse should be used
+user = 'USERNAME'  # Set the username
+pwd = 'PASSWORT'  # Set password

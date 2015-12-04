@@ -1,0 +1,9 @@
+# Ignore project files
+.Rproj.user
+.Rhistory
+.RData
+*.Rproj
+
+# Ignore sensitive files
+matlabFiles/
+src/dbSettings.R
