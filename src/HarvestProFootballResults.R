@@ -48,10 +48,10 @@ if(initialSetup == TRUE){
 # Harvest data
 for(i in 1:length(years)){
   ## Define the link to the data
-  url.pro.footnball <- sprintf("http://www.pro-football-reference.com/years/%s/games.htm", years[i])
+  url.pro.football <- sprintf("http://www.pro-football-reference.com/years/%s/games.htm", years[i])
   
   ## Get the raw HTML data
-  tables <- readHTMLTable(url.pro.footnball)
+  tables <- readHTMLTable(url.pro.football)
   df.games <- tables[["games"]]
   df.games_left <- tables[["games_left"]]
   
@@ -77,7 +77,7 @@ for(i in 1:length(years)){
   df.games$TOW <- as.numeric(df.games$TOW)
   df.games$YdsL <- as.numeric(df.games$YdsL)
   df.games$TOL <- as.numeric(df.games$TOL)
-  df.games$Date <- as.Date(paste(df.games$Date, i, sep = ", "), "%B %d, %Y")
+  df.games$Date <- as.Date(paste(df.games$Date, years[i], sep = ", "), "%B %d, %Y")
   df.games$`Winner/tie` <- as.character(df.games$`Winner/tie`)
   df.games$`Loser/tie` <- as.character(df.games$`Loser/tie`)
   
@@ -132,10 +132,10 @@ for(i in 1:length(years)){
   
   ## If run in update mode, get the last db entry and only add new data
   if(initialSetup == FALSE){
-    sql <- "select \"Date\", \"Winner\" from scores WHERE \"Date\" = (select max(\"Date\") from scores);"
+    sql <- "select \"Date\", \"Home\" from scores WHERE \"Date\" = (select max(\"Date\") from scores);"
     last.results <- fetch(dbSendQuery(nfl.db, sql))
     df.games <- df.games %>%
-      filter(Date >= last.results$Date)
+      filter(Date > last.results$Date)
   }
   
   ## Write data to db
