@@ -1,17 +1,16 @@
-# Load library
-library(dplyr)
+library(plyr)
+library(dplyr) # Data manipulation
+library(lubridate) # Get year component of a date
+library(ggplot2) # For plotting
+library(XLConnect)
+
 
 # Open data
 nfl.db <- src_postgres("nfl", host = "localhost", user = "dominik")
 nfl <- tbl(nfl.db, "scores")
 
-# Get data
 
-nfl.df <- nfl %>%
-  filter(Date >= "2014-01-01",
-         Date < "2015-01-01") %>%
-  collect()
-
+# Get years in db
 nfl.years <- nfl %>%
   select(Date) %>%
   collect()
