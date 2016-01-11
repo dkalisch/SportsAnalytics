@@ -135,12 +135,12 @@ for(i in 1:length(years)){
     sql <- "select \"Date\", \"Home\" from scores WHERE \"Date\" = (select max(\"Date\") from scores);"
     last.results <- fetch(dbSendQuery(nfl.db, sql))
     df.games <- df.games %>%
-      filter(Date > last.results$Date)
+      filter(Date > max(last.results$Date))
   }
   
   ## Write data to db
   print("Write data to DB...")
-  dbWriteTable(nfl.db, name = "scores", df.games, append = TRUE)
+  dbWriteTable(nfl.db, name = "scores", df.games, append = TRUE, row.names = FALSE)
   
 }
 
