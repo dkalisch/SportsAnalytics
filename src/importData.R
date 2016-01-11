@@ -117,7 +117,7 @@ for(i in years){
   print("Write file to DB...")
   
   ## Write data to db
-  dbWriteTable(nfl.db, name = "scores", nfl, append = TRUE)
+  dbWriteTable(nfl.db, name = "scores", nfl, append = TRUE, row.names = FALSE)
   
   if(i == tail(years, n = 1)){
     print("Finished!")
