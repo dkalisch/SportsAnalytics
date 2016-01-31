@@ -25,7 +25,7 @@
 ###
 
 # Initial settings
-initialSetup <- FALSE
+initialSetup <- FALSE # Change to TRUE to load the PostgresSQL database nfl
 startYear <- 1966
 currentYear <- as.numeric(format(Sys.Date(), "%Y"))
 
@@ -35,6 +35,8 @@ library(dplyr) # Data manipulation library
 
 # Load DB connector if not there
 if(!exists("nfl.db")){
+  source("src/connectDB.R")
+} else if (!isPostgresqlIdCurrent(nfl.db)) { # Check for stale connection
   source("src/connectDB.R")
 }
 
@@ -49,14 +51,16 @@ if(initialSetup == TRUE){
 for(i in 1:length(years)){
   ## Define the link to the data
   url.pro.football <- sprintf("http://www.pro-football-reference.com/years/%s/games.htm", years[i])
-  
+
   ## Get the raw HTML data
   tables <- readHTMLTable(url.pro.football)
   df.games <- tables[["games"]]
+  if (is.null(df.games)) # Sometimes a year (for example, current year)
+    next                 # is empty
   df.games_left <- tables[["games_left"]]
-  
+
   print("Clean up data...")
-  
+
   ## Clean up data
   ### Remove additional headlines
   df.games <- df.games[- grep("Date", df.games$Date), ]
@@ -64,11 +68,11 @@ for(i in 1:length(years)){
   if(is.null(grep("Playoffs", df.games$Date))){
     df.games <- df.games[- grep("Playoffs", df.games$Date), ]
   }
-  
+
   ### Add missing header names
   names(df.games) <- c("Week", "Day", "Date", "Col4", "Winner/tie", "Col6", "Loser/tie",
                        "PtsW", "PtsL", "YdsW", "TOW", "YdsL", "TOL")
-  
+
   ### Set correct variable types
   df.games$Week <- as.numeric(df.games$Week)
   df.games$PtsW <- as.numeric(df.games$PtsW)
@@ -80,9 +84,9 @@ for(i in 1:length(years)){
   df.games$Date <- as.Date(paste(df.games$Date, years[i], sep = ", "), "%B %d, %Y")
   df.games$`Winner/tie` <- as.character(df.games$`Winner/tie`)
   df.games$`Loser/tie` <- as.character(df.games$`Loser/tie`)
-  
+
   print("Recode data...")
-  
+
   ## Recode data
   ### Add new variables to code away vs. home
   df.games$Home <- NA
@@ -93,7 +97,7 @@ for(i in 1:length(years)){
   df.games$TOH  <- NA
   df.games$YdsA <- NA
   df.games$TOA  <- NA
-  
+
   ### Switch team names and results according to game location
   for(j in 1:nrow(df.games)){
     if(df.games$Col6[j] == "@"){
@@ -116,7 +120,7 @@ for(i in 1:length(years)){
       df.games$TOA[j] <- df.games$TOL[j]
     }
   }
-  
+
   ### Remove unessesary columns
   df.games$Col4 <- NULL
   df.games$Col6 <- NULL
@@ -129,7 +133,7 @@ for(i in 1:length(years)){
   df.games$YdsL <- NULL
   df.games$TOW <- NULL
   df.games$TOL <- NULL
-  
+
   ## If run in update mode, get the last db entry and only add new data
   if(initialSetup == FALSE){
     sql <- "select \"Date\", \"Home\" from scores WHERE \"Date\" = (select max(\"Date\") from scores);"
@@ -137,11 +141,11 @@ for(i in 1:length(years)){
     df.games <- df.games %>%
       filter(Date > max(last.results$Date))
   }
-  
+
   ## Write data to db
   print("Write data to DB...")
   dbWriteTable(nfl.db, name = "scores", df.games, append = TRUE, row.names = FALSE)
-  
+
 }
 
 # Disconnect from db
