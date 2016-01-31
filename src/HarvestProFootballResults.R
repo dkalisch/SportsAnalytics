@@ -32,6 +32,7 @@ currentYear <- as.numeric(format(Sys.Date(), "%Y"))
 # Load needded libraries
 library(XML) # For scraping the HTML tables
 library(dplyr) # Data manipulation library
+library(RPostgreSQL) # Driver for PostgreSQL
 
 # Load DB connector if not there
 if(!exists("nfl.db")){
@@ -65,8 +66,8 @@ for(i in 1:length(years)){
   ### Remove additional headlines
   df.games <- df.games[- grep("Date", df.games$Date), ]
   df.games <- df.games[df.games[,4] != "", ]
-  if(is.null(grep("Playoffs", df.games$Date))){
-    df.games <- df.games[- grep("Playoffs", df.games$Date), ]
+  if(!is.null(grep("Playoffs", df.games$Date))){
+    df.games <- df.games[1:nrow(df.games) < 120, ]
   }
 
   ### Add missing header names
