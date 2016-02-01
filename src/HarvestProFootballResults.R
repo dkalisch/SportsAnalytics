@@ -13,10 +13,11 @@
 ###
 ###
 ### Modification history
-### ----------------------------------------------------------------------------
+### -------------------------------------------------------------------------------
 ###
 ### Date        Version   Who                 Description
 ### 2015-12-03  0.1       Dominik Kalisch     initial build
+### 2016-01-30  0.11      Mark Sharp          Enhanced robustness of database code
 ###
 ### Needed R packages:  XML
 ###                     dplyr
