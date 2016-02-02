@@ -33,6 +33,7 @@ currentYear <- as.numeric(format(Sys.Date(), "%Y"))
 library(XML) # For scraping the HTML tables
 library(dplyr) # Data manipulation library
 library(RPostgreSQL) # Driver for PostgreSQL
+library(stringi) # Provides a host of string opperations
 
 # Load DB connector if not there
 if(!exists("nfl.db")){
@@ -42,19 +43,21 @@ if(!exists("nfl.db")){
 }
 
 # Build vector of years to parse
-if(initialSetup == TRUE){
+if (initialSetup == TRUE){
   years <- c(startYear:currentYear)
 } else {
   years <- c(currentYear)
 }
 
 # Harvest data
-for(i in 1:length(years)){
+for (i in 1:length(years)){
   ## Define the link to the data
-  url.pro.football <- sprintf("http://www.pro-football-reference.com/years/%s/games.htm", years[i])
+  url.pro.football <- stri_c("http://www.pro-football-reference.com/years/",
+                             years[i], "/games.htm")
 
   ## Get the raw HTML data
-  tables <- readHTMLTable(url.pro.football)
+  tables <- readHTMLTable(url.pro.football, header = TRUE, 
+                          stringsAsFactors = FALSE)
   df.games <- tables[["games"]]
   if (is.null(df.games)) # Sometimes a year (for example, current year)
     next                 # is empty
@@ -63,12 +66,10 @@ for(i in 1:length(years)){
   print("Clean up data...")
 
   ## Clean up data
-  ### Remove additional headlines
-  df.games <- df.games[- grep("Date", df.games$Date), ]
+  ### Remove additional headlines, playoff games, by week, and blank lines
+  df.games <- suppressWarnings(df.games[
+    !is.na(as.numeric(as.character(df.games$Week))), ])
   df.games <- df.games[df.games[,4] != "", ]
-  if(!is.null(grep("Playoffs", df.games$Date))){
-    df.games <- df.games[1:nrow(df.games) < 120, ]
-  }
 
   ### Add missing header names
   names(df.games) <- c("Week", "Day", "Date", "Col4", "Winner/tie", "Col6", "Loser/tie",
@@ -100,8 +101,8 @@ for(i in 1:length(years)){
   df.games$TOA  <- NA
 
   ### Switch team names and results according to game location
-  for(j in 1:nrow(df.games)){
-    if(df.games$Col6[j] == "@"){
+  for (j in 1:nrow(df.games)){
+    if (df.games$Col6[j] == "@"){
       df.games$Home[j] <- df.games$`Loser/tie`[j]
       df.games$PtsH[j] <- df.games$PtsL[j]
       df.games$Away[j] <- df.games$`Winner/tie`[j]
@@ -136,7 +137,7 @@ for(i in 1:length(years)){
   df.games$TOL <- NULL
 
   ## If run in update mode, get the last db entry and only add new data
-  if(initialSetup == FALSE){
+  if (initialSetup == FALSE){
     sql <- "select \"Date\", \"Home\" from scores WHERE \"Date\" = (select max(\"Date\") from scores);"
     last.results <- fetch(dbSendQuery(nfl.db, sql))
     df.games <- df.games %>%
