@@ -17,16 +17,18 @@
 ###
 ### Date        Version   Who                 Description
 ### 2015-12-03  0.1       Dominik Kalisch     initial build
+### 2016-02-09  0.11      Dominik Kalisch     Fixed date bug
 ###
 ### Needed R packages:  XLConnect
 ###                     dplyr
+###                     lubridata
 ###
 ### Needed R files: connectDB.R
-###                 lubridate
+###                 
 ###
 
 # Load DB connector if not there
-if(!exists("nfl.db")){
+if (!exists("nfl.db")) {
   source("src/connectDB.R")
 }
 
@@ -39,7 +41,7 @@ library(lubridate) # For manipulating dates
 years <- as.character(c(1966:2014))
 
 # Read data from xlsx file
-for(i in years){
+for(i in years) {
   print(i)
   print("Read file...")
   nfl <- readWorksheetFromFile(file = "data/NFL_Reference.xlsx", sheet = i) # Read file
@@ -49,13 +51,11 @@ for(i in years){
   ## Clean up data
   ### Remove additional headlines
   nfl <- nfl[- grep("Date", nfl$Date), ]
-  if(!is.null(grep("Playoffs", nfl$Date))){
+  if (!is.null(grep("Playoffs", nfl$Date))) {
     nfl <- nfl[- grep("Playoffs", nfl$Date), ]
   }
   
   ### Set correct variable types
-  nfl$Week <- as.numeric(nfl$Week)
-  
   nfl$PtsW <- as.numeric(nfl$PtsW)
   nfl$PtsL <- as.numeric(nfl$PtsL)
   nfl$YdsW <- as.numeric(nfl$YdsW)
@@ -63,7 +63,8 @@ for(i in years){
   nfl$YdsL <- as.numeric(nfl$YdsL)
   nfl$TOL <- as.numeric(nfl$TOL)
   nfl$Date <- as.Date(nfl$Date)
-  year(nfl$Date) <- as.numeric(i)
+  year(nfl$Date[month(nfl$Date) < 7]) <- as.numeric(i) + 1
+  year(nfl$Date[month(nfl$Date) > 7]) <- as.numeric(i)
   
   print("Recode data...")
   
@@ -79,8 +80,8 @@ for(i in years){
   nfl$TOA  <- NA
   
   ### Switch team names and results according to game location
-  for(j in 1:nrow(nfl)){
-    if(!is.na(nfl$Col6[j])){
+  for(j in 1:nrow(nfl)) {
+    if (!is.na(nfl$Col6[j])) {
       nfl$Home[j] <- nfl$Loser.tie[j]
       nfl$PtsH[j] <- nfl$PtsL[j]
       nfl$Away[j] <- nfl$Winner.tie[j]
@@ -119,7 +120,7 @@ for(i in years){
   ## Write data to db
   dbWriteTable(nfl.db, name = "scores", nfl, append = TRUE, row.names = FALSE)
   
-  if(i == tail(years, n = 1)){
+  if (i == tail(years, n = 1)) {
     print("Finished!")
   } else {
     print("Next...")

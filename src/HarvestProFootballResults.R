@@ -18,15 +18,19 @@
 ### Date        Version   Who                 Description
 ### 2015-12-03  0.1       Dominik Kalisch     initial build
 ### 2016-01-30  0.11      Mark Sharp          Enhanced robustness of database code
+### 2016-02-02  0.12      Mark Sharp          Added use of stringi, arguments to
+###                                           readHTMLTable, and whitespace
+### 2015-02-09  0.1       Dominik Kalisch     Fixed date bug
 ###
 ### Needed R packages:  XML
 ###                     dplyr
+###                     stringi
 ###
 ### Needed R files: connectDB.R
 ###
 
 # Initial settings
-initialSetup <- FALSE # Change to TRUE to load the PostgresSQL database nfl
+initialSetup <- FALSE # Change to TRUE to load an initial setup of nfl data into the datbase
 startYear <- 1966
 currentYear <- as.numeric(format(Sys.Date(), "%Y"))
 
@@ -37,21 +41,21 @@ library(RPostgreSQL) # Driver for PostgreSQL
 library(stringi) # Provides a host of string opperations
 
 # Load DB connector if not there
-if(!exists("nfl.db")){
+if (!exists("nfl.db")) {
   source("src/connectDB.R")
 } else if (!isPostgresqlIdCurrent(nfl.db)) { # Check for stale connection
   source("src/connectDB.R")
 }
 
 # Build vector of years to parse
-if (initialSetup == TRUE){
+if (initialSetup == TRUE) {
   years <- c(startYear:currentYear)
 } else {
   years <- c(currentYear)
 }
 
 # Harvest data
-for (i in 1:length(years)){
+for (i in 1:length(years)) {
   ## Define the link to the data
   url.pro.football <- stri_c("http://www.pro-football-reference.com/years/",
                              years[i], "/games.htm")
@@ -59,6 +63,7 @@ for (i in 1:length(years)){
   ## Get the raw HTML data
   tables <- readHTMLTable(url.pro.football, header = TRUE, 
                           stringsAsFactors = FALSE)
+  
   df.games <- tables[["games"]]
   if (is.null(df.games)) # Sometimes a year (for example, current year)
     next                 # is empty
@@ -68,23 +73,25 @@ for (i in 1:length(years)){
 
   ## Clean up data
   ### Remove additional headlines, playoff games, by week, and blank lines
-  df.games <- suppressWarnings(df.games[
-    !is.na(as.numeric(as.character(df.games$Week))), ])
-  df.games <- df.games[df.games[,4] != "", ]
+  df.games <- df.games[- grep("Date", df.games$Date), ]
+  if (!is.null(grep("Playoffs", df.games$Date))) {
+    df.games <- df.games[- grep("Playoffs", df.games$Date), ]
+  }
 
   ### Add missing header names
   names(df.games) <- c("Week", "Day", "Date", "Col4", "Winner/tie", "Col6", "Loser/tie",
                        "PtsW", "PtsL", "YdsW", "TOW", "YdsL", "TOL")
 
   ### Set correct variable types
-  df.games$Week <- as.numeric(df.games$Week)
   df.games$PtsW <- as.numeric(df.games$PtsW)
   df.games$PtsL <- as.numeric(df.games$PtsL)
   df.games$YdsW <- as.numeric(df.games$YdsW)
   df.games$TOW <- as.numeric(df.games$TOW)
   df.games$YdsL <- as.numeric(df.games$YdsL)
   df.games$TOL <- as.numeric(df.games$TOL)
-  df.games$Date <- as.Date(paste(df.games$Date, years[i], sep = ", "), "%B %d, %Y")
+  df.games$Date <- as.Date(df.games$Date, "%B %d")
+  year(df.games$Date[month(df.games$Date) < 7]) <- years[i] + 1
+  year(df.games$Date[month(df.games$Date) > 7]) <- years[i]
   df.games$`Winner/tie` <- as.character(df.games$`Winner/tie`)
   df.games$`Loser/tie` <- as.character(df.games$`Loser/tie`)
 
@@ -102,8 +109,8 @@ for (i in 1:length(years)){
   df.games$TOA  <- NA
 
   ### Switch team names and results according to game location
-  for (j in 1:nrow(df.games)){
-    if (df.games$Col6[j] == "@"){
+  for (j in 1:nrow(df.games)) {
+    if (df.games$Col6[j] == "@") {
       df.games$Home[j] <- df.games$`Loser/tie`[j]
       df.games$PtsH[j] <- df.games$PtsL[j]
       df.games$Away[j] <- df.games$`Winner/tie`[j]
@@ -138,7 +145,7 @@ for (i in 1:length(years)){
   df.games$TOL <- NULL
 
   ## If run in update mode, get the last db entry and only add new data
-  if (initialSetup == FALSE){
+  if (initialSetup == FALSE) {
     sql <- "select \"Date\", \"Home\" from scores WHERE \"Date\" = (select max(\"Date\") from scores);"
     last.results <- fetch(dbSendQuery(nfl.db, sql))
     df.games <- df.games %>%
