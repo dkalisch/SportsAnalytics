@@ -1,8 +1,8 @@
-library(plyr)
-library(dplyr) # Data manipulation
-library(lubridate) # Get year component of a date
-library(ggplot2) # For plotting
-library(XLConnect)
+require(plyr)
+require(dplyr) # Data manipulation
+require(lubridate) # Get year component of a date
+require(ggplot2) # For plotting
+require(XLConnect)
 
 
 # Open data
