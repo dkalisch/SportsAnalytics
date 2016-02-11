@@ -100,18 +100,36 @@ shinyUI(
           ),
                          
           # Tab with the data of the selected teams
+          tabPanel("Colley Scores",
+                   h4("Input parameter"),
+                   div(style="display:inline-block",uiOutput("selectcGamma")),
+                   div(style="display:inline-block",uiOutput("selectcWeek")),
+                   
+                   dataTableOutput("colleyScores"),
+                   tags$head(
+                     tags$style(
+                       type="text/css",
+                       "tfoot {
+                         display: table-header-group;
+                       }
+                       .dataTables_filter {
+                         display: none;
+                       }"
+                     )
+                   )
+          ),
           tabPanel("Data Table", dataTableOutput("table"),
-            tags$head(
-              tags$style(
-                type="text/css",
-                "tfoot {
-                  display: table-header-group;
-                }
-                .dataTables_filter {
-                  display: none;
-                }"
-              )
-            )
+                   tags$head(
+                     tags$style(
+                       type="text/css",
+                       "tfoot {
+                       display: table-header-group;
+                       }
+                       .dataTables_filter {
+                       display: none;
+                       }"
+                     )
+                   )
           )
         )
       )
@@ -119,21 +137,23 @@ shinyUI(
     
     # Copyright
     fluidRow(
-      HTML("This Webapplication was developed by <a href='http://www.kalisch.biz'>Dr. Dominik Kalisch</a>.
-            The source code can be found on github:
-            <a xmlns:cc='http://creativecommons.org/ns#'
-           href='https://github.com/dkalisch/SportsAnalytics'
-           property='cc:attributionName'
-           rel='cc:attributionURL'>https://github.com/dkalisch/SportsAnalytics</a>
-            <a rel='license' href='http://creativecommons.org/licenses/by-nc-sa/3.0/deed.en'>
-              <img alt='Creative Commons License'
-              style='border-width:0;
-              margin-right:5px;
-              margin-left:1px;
-              vertical-align:top'
-              src='http://i.creativecommons.org/l/by-nc-sa/3.0/80x15.png'/>
-            </a>"
-           )
+      column(12,
+        HTML("This Webapplication was developed by <a href='http://www.kalisch.biz'>Dr. Dominik Kalisch</a>.
+              The source code can be found on github:
+              <a xmlns:cc='http://creativecommons.org/ns#'
+             href='https://github.com/dkalisch/SportsAnalytics'
+             property='cc:attributionName'
+             rel='cc:attributionURL'>https://github.com/dkalisch/SportsAnalytics</a>
+              <a rel='license' href='http://creativecommons.org/licenses/by-nc-sa/3.0/deed.en'>
+                <img alt='Creative Commons License'
+                style='border-width:0;
+                margin-right:5px;
+                margin-left:1px;
+                vertical-align:top'
+                src='http://i.creativecommons.org/l/by-nc-sa/3.0/80x15.png'/>
+              </a>"
+             )
+      )
     )
   )
 )
