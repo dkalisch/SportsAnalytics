@@ -1,6 +1,6 @@
 # Define background calculations for shiny application
 shinyServer(function(input, output, session) {
-  
+  cat("top of shinyServer\n")
   # Get the URL variable which file to be analyzed 
   ## If no variable is given, create the drop down menu
   output$queryText <- renderText({
