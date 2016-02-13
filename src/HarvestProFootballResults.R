@@ -36,21 +36,21 @@ library(RPostgreSQL) # Driver for PostgreSQL
 library(stringi) # Provides a host of string opperations
 
 # Load DB connector if not there
-if(!exists("nfl.db")){
+if (!exists("nfl.db")) {
   source("src/connectDB.R")
 } else if (!isPostgresqlIdCurrent(nfl.db)) { # Check for stale connection
   source("src/connectDB.R")
 }
 
 # Build vector of years to parse
-if (initialSetup == TRUE){
+if (initialSetup == TRUE) {
   years <- c(startYear:currentYear)
 } else {
   years <- c(currentYear)
 }
 
 # Harvest data
-for (i in 1:length(years)){
+for (i in 1:length(years)) {
   ## Define the link to the data
   url.pro.football <- stri_c("http://www.pro-football-reference.com/years/",
                              years[i], "/games.htm")
@@ -101,27 +101,24 @@ for (i in 1:length(years)){
   df.games$TOA  <- NA
 
   ### Switch team names and results according to game location
-  for (j in 1:nrow(df.games)){
-    if (df.games$Col6[j] == "@"){
-      df.games$Home[j] <- df.games$`Loser/tie`[j]
-      df.games$PtsH[j] <- df.games$PtsL[j]
-      df.games$Away[j] <- df.games$`Winner/tie`[j]
-      df.games$PtsA[j] <- df.games$PtsW[j]
-      df.games$YdsH[j] <- df.games$YdsL[j]
-      df.games$TOH[j] <- df.games$TOL[j]
-      df.games$YdsA[j] <- df.games$YdsW[j]
-      df.games$TOA[j] <- df.games$TOW[j]
-    } else {
-      df.games$Home[j] <- df.games$`Winner/tie`[j]
-      df.games$PtsH[j] <- df.games$PtsW[j]
-      df.games$Away[j] <- df.games$`Loser/tie`[j]
-      df.games$PtsA[j] <- df.games$PtsL[j]
-      df.games$YdsH[j] <- df.games$YdsW[j]
-      df.games$TOH[j] <- df.games$TOW[j]
-      df.games$YdsA[j] <- df.games$YdsL[j]
-      df.games$TOA[j] <- df.games$TOL[j]
-    }
-  }
+  asterisk <- df.games$Col6 == "@"
+  df.games$Home[asterisk] <- df.games$`Loser/tie`[asterisk]
+  df.games$PtsH[asterisk] <- df.games$PtsL[asterisk]
+  df.games$Away[asterisk] <- df.games$`Winner/tie`[asterisk]
+  df.games$PtsA[asterisk] <- df.games$PtsW[asterisk]
+  df.games$YdsH[asterisk] <- df.games$YdsL[asterisk]
+  df.games$TOH[asterisk] <- df.games$TOL[asterisk]
+  df.games$YdsA[asterisk] <- df.games$YdsW[asterisk]
+  df.games$TOA[asterisk] <- df.games$TOW[asterisk]
+
+  df.games$Home[!asterisk] <- df.games$`Winner/tie`[!asterisk]
+  df.games$PtsH[!asterisk] <- df.games$PtsW[!asterisk]
+  df.games$Away[!asterisk] <- df.games$`Loser/tie`[!asterisk]
+  df.games$PtsA[!asterisk] <- df.games$PtsL[!asterisk]
+  df.games$YdsH[!asterisk] <- df.games$YdsW[!asterisk]
+  df.games$TOH[!asterisk] <- df.games$TOW[!asterisk]
+  df.games$YdsA[!asterisk] <- df.games$YdsL[!asterisk]
+  df.games$TOA[!asterisk] <- df.games$TOL[!asterisk]
 
   ### Remove unessesary columns
   df.games$Col4 <- NULL
@@ -137,7 +134,7 @@ for (i in 1:length(years)){
   df.games$TOL <- NULL
 
   ## If run in update mode, get the last db entry and only add new data
-  if (initialSetup == FALSE){
+  if (initialSetup == FALSE) {
     sql <- "select \"Date\", \"Home\" from scores WHERE \"Date\" = (select max(\"Date\") from scores);"
     last.results <- fetch(dbSendQuery(nfl.db, sql))
     df.games <- df.games %>%
