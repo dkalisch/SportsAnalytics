@@ -2,8 +2,8 @@ source("functions/colley.R")
 
 # Define background calculations for shiny application
 shinyServer(function(input, output, session) {
-  cat("top of shinyServer\n")
-  # Get the URL variable which file to be analyzed 
+
+  # Get the URL variable which file to be analyzed
   ## If no variable is given, create the drop down menu
   output$queryText <- renderText({
     if(session$clientData$url_search == '') {
@@ -11,11 +11,11 @@ shinyServer(function(input, output, session) {
     } else {
       query <- parseQueryString(session$clientData$url_search)
     }
-    
+
     # Return a string with key-value pairs
     paste(query)
   })
-  
+
   # Load the data from database
   nfl.df <- reactive({
     validate(need(input$selectYear, message = FALSE))
@@ -26,8 +26,8 @@ shinyServer(function(input, output, session) {
 
 #    if(session$clientData$url_search == '') {
       query <- nfl %>%
-        dplyr::select(Week, Date, Away, Home, PtsA, PtsH, YdsA, YdsH, TOA, TOH) %>%
-        dplyr::filter(Date >= nfl.start,
+        select(Week, Date, Away, Home, PtsA, PtsH, YdsA, YdsH, TOA, TOH) %>%
+        filter(Date >= nfl.start,
                Date < nfl.end) %>%
 #        dplyr::filter(!is.na(Week)) %>%
         dplyr::collect()
@@ -38,47 +38,47 @@ shinyServer(function(input, output, session) {
 #        collect()
 #    }
   })
-  
+
   # Data preperation
   ## Get a subset of the data set according to the selected teams
   nfl.df.sub <- reactive({
     nfl.df.sub <- nfl.df() %>%
       dplyr::filter(Home %in% input$selectTeam | Away %in% input$selectTeam)
   })
-  
+
   ## Get only the away games of the selected teams
   nfl.df.sub.a <- reactive({
     nfl.df.sub.a <- nfl.df.sub() %>%
       dplyr::filter(Away %in% input$selectTeam) %>%
       dplyr::select(Date, Away, PtsA, YdsA, TOA)
   })
-  
+
   ## Get only the home games of the selected teams
   nfl.df.sub.h <- reactive({
     nfl.df.sub.h <- nfl.df.sub() %>%
       dplyr::filter(Home %in% input$selectTeam) %>%
       dplyr::select(Date, Home, PtsH, YdsH, TOH)
   })
-  
+
   ## Get the combined games of the selected teams
-  ### Get and rename home games header to combine later 
+  ### Get and rename home games header to combine later
   nfl.df.sub.c <- reactive({
     nfl.df.sub.h <- nfl.df.sub.h() %>%
       dplyr::rename(Team = Home,
              Pts = PtsH,
              Yds = YdsH,
              TO = TOH)
-  ### Get and rename home games header to combine later  
+  ### Get and rename home games header to combine later
   nfl.df.sub.a <- nfl.df.sub.a() %>%
     dplyr::rename(Team = Away,
            Pts = PtsA,
            Yds = YdsA,
            TO = TOA)
-  
-  ### Combine all home and away games  
+
+  ### Combine all home and away games
   nfl.df.sub.c <- data.frame(rbind(nfl.df.sub.h,nfl.df.sub.a))
   })
-  
+
   # Analytics
   ## Create the data set summary of the selected teams
   ### Summary for away games
@@ -96,7 +96,7 @@ shinyServer(function(input, output, session) {
                 SD = sd(PtsA, na.rm = FALSE) # Standard Deviation
                 )
   })
-  
+
   ### Summary for home games
   output$summaryH <- renderTable({
     nfl.df.sub.h <- nfl.df.sub.h() %>%
@@ -112,7 +112,7 @@ shinyServer(function(input, output, session) {
                 SD = sd(PtsH, na.rm = FALSE) # Standard Deviation
     )
   })
-  
+
   ### Summary for combined games
   output$summaryC <- renderTable({
     nfl.df.sub.c <- nfl.df.sub.c() %>%
@@ -128,7 +128,7 @@ shinyServer(function(input, output, session) {
                 SD = sd(Pts, na.rm = FALSE) # Standard Deviation
       )
   })
-  
+
   # Analytics
   ## Calcualte Colley Scores
   output$colleyScores <- renderDataTable({
@@ -136,28 +136,28 @@ shinyServer(function(input, output, session) {
     as.data.frame(nfl.colley$colly.r) %>%
       dplyr::filter(TeamID %in% input$selectTeam)
   },
-  
+
   ### Define the functionality of the data table
   options = list(columns.searchable = TRUE, # Is searchable
                  orderClasses = TRUE, # Can set classes
                  lengthMenu = list(c(10, 25, -1), c('10', '25', 'All')), # Define the possible length of the table
                  pageLength = 25) # Set standard lenght
   )
-  
+
   # Plots
   ## Create a time series plot of the selected data
   output$plot <- renderPlot({
     ### Define variables and meta indicators
     #y.axis.desc <- subset(hdx.desc()$Description, hdx.desc()$Attribute == 'Units') # Get the unit definition
     title.desc <- paste0("Team performance over time in ", as.numeric(input$selectYear)) # Title based on year selection
-    
+
     #### Create plot
     p <- ggplot(nfl.df.sub.c(), aes(x = Date, y = Pts, colour = factor(Team), group = Team)) + # Plot definition
       geom_point(size = 3) + # Add points
       geom_line() + # Add line
       labs(x = NULL, fill = NULL) + # Define axis
       labs(title = title.desc) + # Define title
-      
+
       ##### Design the plot
       guides(colour = guide_legend(title = 'Team', ncol = 3)) +
       theme(plot.title = element_text(size = rel(1.5), vjust=3),
@@ -168,34 +168,34 @@ shinyServer(function(input, output, session) {
             legend.text = element_text(size = rel(1.2)),
             legend.title = element_text(size = rel(1.2))
       )
-    
+
     #### Return plot
     print(p)
   })
-  
+
   # Data Tables
   ## Create a data table of the selected contries
   output$table <- renderDataTable({
-    
+
     ### Data set to be displayed
     nfl.df.sub()},
-    
+
     ### Define the functionality of the data table
     options = list(columns.searchable = TRUE, # Is searchable
                    orderClasses = TRUE, # Can set classes
                    lengthMenu = list(c(10, 25, -1), c('10', '25', 'All')), # Define the possible length of the table
                    pageLength = 25) # Set standard lenght
   )
-  
+
   # Create download handler
   output$downloadData <- downloadHandler(
-    
+
     ## This function returns a string which tells the client
     ## browser what name to use when saving the file.
     filename = function() {
       paste(paste('NFL_Data', input$selectYear,sep = "_"), input$filetype, sep = ".")
     },
-    
+
     ## This function should write data to a file given to it by
     ## the argument 'file'.
     content = function(file) {
@@ -211,13 +211,13 @@ shinyServer(function(input, output, session) {
       } else {
         ### Settings for text files
         sep <- switch(input$filetype, "csv" = ",", "tsv" = "\t")
-        
+
         ### Write to a file specified by the 'file' argument
         write.table(nfl.df.sub(), file, sep = sep, row.names = FALSE)
       }
     }
   )
-  
+
   # Menus
   ## Create a menu to select the years to be loaded
   output$selectYear <- renderUI({
@@ -225,24 +225,24 @@ shinyServer(function(input, output, session) {
       selectInput("selectYear", "Choose a year:", nfl.years, selected = "2014")
     }
   })
-  
+
   ## Create a menu to select teams
   output$selectTeam <- renderUI({
     nfl.teams <- as.character(unique(nfl.df()$Home))
     selectInput("selectTeam", "Please select a team", nfl.teams, multiple = TRUE)
   })
-  
+
   ## Create a menu to select visulized variable in graph
   output$selectVar <- renderUI({
     nfl.vars <- as.character(names(nfl.df.sub.c())[c(-1,-2)])
     selectInput("selectVar", "Please select a variable", nfl.vars, selected = "Pts")
   })
-  
+
   ## Create a input field for the colley score gamma
   output$selectcGamma <- renderUI({
     numericInput("cGamma", "Please select a weight", value = 1)
   })
-  
+
   ## Create a input field for the colley score gamma start week
   output$selectcWeek <- renderUI({
     numericInput("cWeek", "Please select when the weight should start", value = 2)
