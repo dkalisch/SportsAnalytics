@@ -3,7 +3,7 @@
 ###
 ### Url:      http://www.kalisch.biz
 ###
-### File:     ColleyScore.R
+### File:     colley.R
 ###
 ### Author:   Dominik P.H. Kalisch (dkalisch@trinty.edu)
 ###
@@ -22,8 +22,8 @@
 ###                 
 ###
 # Load need required libraries
-require(fBasics)
-require(dplyr)
+library(fBasics)
+library(dplyr)
 
 colley <- function(df, gamma = 1, week = 2){
   # Prepare data for the calculations
