@@ -21,7 +21,7 @@
 ###                     fBasics
 ###                 
 ###
-# Load need required libraries
+# Load required packages
 library(fBasics)
 library(dplyr)
 
@@ -34,8 +34,8 @@ colley <- function(df, gamma = 1, week = 2){
   df$Home <- as.factor(df$Home)
   df$Away <- as.factor(df$Away)
   
-  ## Define a wight
-  w <- pmax((Sign(as.numeric(df$Week) - (week-0.5)) * gamma),1)
+  ## Define a weight
+  w <- pmax((Sign(as.numeric(df$Week) - (week - 0.5)) * gamma), 1)
   
   # Create a incidence matrix
   ## Start with an empty matrix
@@ -44,15 +44,15 @@ colley <- function(df, gamma = 1, week = 2){
   ## Compare results of home and away team and set set 1 for the winner
   ## where is row the home team and column the away team with the index number
   ## equal to the factor of the variable.
-  for(i in 1:nrow(df)){
+  for (i in 1:nrow(df)) {
     # Get the position of the current team in the matrix
     a <- as.numeric(df$Home[i])
     b <- as.numeric(df$Away[i])
     
     # Fill in the values
-    if(df$PtsH[i] > df$PtsA[i]){
+    if (df$PtsH[i] > df$PtsA[i]) {
       A[a, b] <- A[a, b] + 1 * w[i] 
-    } else if(df$PtsH[i] < df$PtsA[i]){
+    } else if (df$PtsH[i] < df$PtsA[i]) {
       A[b, a] <- A[b, a] + 1 * w[i]
     } else {
       A[a, b] <- A[a, b] + 0.5 * w[i]
