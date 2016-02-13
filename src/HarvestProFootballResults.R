@@ -74,9 +74,9 @@ for (i in 1:length(years)) {
   
   ## Clean up data
   ### Remove additional headlines, playoff games, by week, and blank lines
-  df.games <- df.games[- grep("Date", df.games$Date), ]
+  df.games <- df.games[-grep("Date", df.games$Date), ]
   if (!is.null(grep("Playoffs", df.games$Date))) {
-    df.games <- df.games[- grep("Playoffs", df.games$Date), ]
+    df.games <- df.games[-grep("Playoffs", df.games$Date), ]
   }
   
   ### Add missing header names
