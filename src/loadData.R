@@ -1,4 +1,4 @@
-# Load library
+# Load package
 library(dplyr)
 
 # Open data
