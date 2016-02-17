@@ -1,3 +1,4 @@
+
 ###
 ### Project:  NFL Sports Analytics
 ###
@@ -59,7 +60,7 @@ for (i in 1:length(years)) {
   ## Define the link to the data
   url.pro.football <- stri_c("http://www.pro-football-reference.com/years/",
                              years[i], "/games.htm")
-
+  
   ## Get the raw HTML data
   tables <- readHTMLTable(url.pro.football, header = TRUE, 
                           stringsAsFactors = FALSE)
@@ -68,20 +69,20 @@ for (i in 1:length(years)) {
   if (is.null(df.games)) # Sometimes a year (for example, current year)
     next                 # is empty
   df.games_left <- tables[["games_left"]]
-
+  
   print("Clean up data...")
-
+  
   ## Clean up data
   ### Remove additional headlines, playoff games, by week, and blank lines
-  df.games <- df.games[- grep("Date", df.games$Date), ]
+  df.games <- df.games[-grep("Date", df.games$Date), ]
   if (!is.null(grep("Playoffs", df.games$Date))) {
-    df.games <- df.games[- grep("Playoffs", df.games$Date), ]
+    df.games <- df.games[-grep("Playoffs", df.games$Date), ]
   }
-
+  
   ### Add missing header names
   names(df.games) <- c("Week", "Day", "Date", "Col4", "Winner/tie", "Col6", "Loser/tie",
                        "PtsW", "PtsL", "YdsW", "TOW", "YdsL", "TOL")
-
+  
   ### Set correct variable types
   df.games$PtsW <- as.numeric(df.games$PtsW)
   df.games$PtsL <- as.numeric(df.games$PtsL)
@@ -94,9 +95,9 @@ for (i in 1:length(years)) {
   year(df.games$Date[month(df.games$Date) > 7]) <- years[i]
   df.games$`Winner/tie` <- as.character(df.games$`Winner/tie`)
   df.games$`Loser/tie` <- as.character(df.games$`Loser/tie`)
-
+  
   print("Recode data...")
-
+  
   ## Recode data
   ### Add new variables to code away vs. home
   df.games$Home <- NA
@@ -107,30 +108,26 @@ for (i in 1:length(years)) {
   df.games$TOH  <- NA
   df.games$YdsA <- NA
   df.games$TOA  <- NA
-
+  
   ### Switch team names and results according to game location
-  for (j in 1:nrow(df.games)) {
-    if (df.games$Col6[j] == "@") {
-      df.games$Home[j] <- df.games$`Loser/tie`[j]
-      df.games$PtsH[j] <- df.games$PtsL[j]
-      df.games$Away[j] <- df.games$`Winner/tie`[j]
-      df.games$PtsA[j] <- df.games$PtsW[j]
-      df.games$YdsH[j] <- df.games$YdsL[j]
-      df.games$TOH[j] <- df.games$TOL[j]
-      df.games$YdsA[j] <- df.games$YdsW[j]
-      df.games$TOA[j] <- df.games$TOW[j]
-    } else {
-      df.games$Home[j] <- df.games$`Winner/tie`[j]
-      df.games$PtsH[j] <- df.games$PtsW[j]
-      df.games$Away[j] <- df.games$`Loser/tie`[j]
-      df.games$PtsA[j] <- df.games$PtsL[j]
-      df.games$YdsH[j] <- df.games$YdsW[j]
-      df.games$TOH[j] <- df.games$TOW[j]
-      df.games$YdsA[j] <- df.games$YdsL[j]
-      df.games$TOA[j] <- df.games$TOL[j]
-    }
-  }
-
+  asterisk <- df.games$Col6 == "@"
+  df.games$Home[asterisk] <- df.games$`Loser/tie`[asterisk]
+  df.games$PtsH[asterisk] <- df.games$PtsL[asterisk]
+  df.games$Away[asterisk] <- df.games$`Winner/tie`[asterisk]
+  df.games$PtsA[asterisk] <- df.games$PtsW[asterisk]
+  df.games$YdsH[asterisk] <- df.games$YdsL[asterisk]
+  df.games$TOH[asterisk] <- df.games$TOL[asterisk]
+  df.games$YdsA[asterisk] <- df.games$YdsW[asterisk]
+  df.games$TOA[asterisk] <- df.games$TOW[asterisk]
+  
+  df.games$Home[!asterisk] <- df.games$`Winner/tie`[!asterisk]
+  df.games$PtsH[!asterisk] <- df.games$PtsW[!asterisk]
+  df.games$Away[!asterisk] <- df.games$`Loser/tie`[!asterisk]
+  df.games$PtsA[!asterisk] <- df.games$PtsL[!asterisk]
+  df.games$YdsH[!asterisk] <- df.games$YdsW[!asterisk]
+  df.games$TOH[!asterisk] <- df.games$TOW[!asterisk]
+  df.games$YdsA[!asterisk] <- df.games$YdsL[!asterisk]
+  df.games$TOA[!asterisk] <- df.games$TOL[!asterisk]
   ### Remove unessesary columns
   df.games$Col4 <- NULL
   df.games$Col6 <- NULL
@@ -143,7 +140,7 @@ for (i in 1:length(years)) {
   df.games$YdsL <- NULL
   df.games$TOW <- NULL
   df.games$TOL <- NULL
-
+  
   ## If run in update mode, get the last db entry and only add new data
   if (initialSetup == FALSE) {
     sql <- "select \"Date\", \"Home\" from scores WHERE \"Date\" = (select max(\"Date\") from scores);"
@@ -151,11 +148,11 @@ for (i in 1:length(years)) {
     df.games <- df.games %>%
       filter(Date > max(last.results$Date))
   }
-
+  
   ## Write data to db
   print("Write data to DB...")
   dbWriteTable(nfl.db, name = "scores", df.games, append = TRUE, row.names = FALSE)
-
+  
 }
 
 # Disconnect from db

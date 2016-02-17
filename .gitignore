@@ -7,3 +7,9 @@
 # Ignore sensitive files
 matlabFiles/
 src/dbSettings.R
+data/.MySCMServerInfo
+.MySCMServerInfo
+R/.MySCMServerinfo
+data/*.tex
+data/NFL_Reference.xlsx
+instr/*

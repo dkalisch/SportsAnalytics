@@ -1,96 +1,62 @@
-###
-### Project:  NFL Sports Analytics
-###
-### Url:      http://www.kalisch.biz
-###
-### File:     ColleyScore.R
-###
-### Author:   Dominik P.H. Kalisch (dkalisch@trinty.edu)
-###
-### Desc.:    This script calculates the Colley scores for a given set of teams
-###
-###
-### Modification history
-### ----------------------------------------------------------------------------
-###
-### Date        Version   Who                 Description
-### 2016-02-09  0.1       Dominik Kalisch     initial build
-###
-### Needed R packages:  dplyr
-###                     fBasics
-###                 
-###
-
 # Load library
 library(dplyr) # Data gathering and manipulation
 library(fBasics) # Havyside function
 
-# Get data
-## Open connection to data base
-nfl.db <- src_postgres(dbname = "nfl", host = "localhost", user = "nflread", password = "sportsanalytics")
+# Open data
+nfl.db <- src_postgres("nfl", host = "localhost", user = "dominik")
 nfl <- tbl(nfl.db, "scores")
 
-## Request a time frame from the data base
 nfl.df <- nfl %>%
-  dplyr::filter(Date >= "2015-06-01",
-                Date < "2016-05-31") %>%
+  dplyr::filter(Date >= "2014-01-01",
+         Date < "2015-01-01") %>%
   collect()
 
-# Prepare data for the calculations
-## Set team names to factors for sorting in matrix
 nfl.df$Home <- as.factor(nfl.df$Home)
 nfl.df$Away <- as.factor(nfl.df$Away)
 
-## Split data into regular season and playoffs 
-nflReg <- suppressWarnings(nfl.df[!is.na(as.numeric(nfl.df$Week)),])
-nflPO <- anti_join(nfl.df, nflReg, by = "Week")
+nfl.df <- nfl.df[!is.na(nfl.df$Week),]
 
-## Define a wight
-w <- Heaviside(as.numeric(nflReg$Week)-2.5) + 1
+#### Not working
+##library(Matrix)
+##
+##hs <- Heaviside(nfl.df$Week-2.5) + 1
+##
+##in.home.w <- sparseMatrix(i = as.numeric(nfl.df$Home),
+##                          j = as.numeric(nfl.df$Away),
+##                          x = (nfl.df$PtsH %*% hs),
+##                          dims = c(nlevels(nfl.df$Home), nlevels(nfl.df$Home)))
+##in.away.w <- sparseMatrix(i = as.numeric(nfl.df$Home),
+##                          j = as.numeric(nfl.df$Away),
+##                          x = (nfl.df$PtsA %*% hs),
+##                          dims = c(nlevels(nfl.df$Home), nlevels(nfl.df$Home)))
+##
+##in.home.w + in.away.w
+####
 
-# Create a incidence matrix
-## Start with an empty matrix
-A <- matrix(nrow = nlevels(nflReg$Home), ncol = nlevels(nflReg$Home), 0)
+# Home is row, Away is column. Winner gets a 1
+A <- matrix(nrow = nlevels(nfl.df$Home), ncol = nlevels(nfl.df$Home), 0)
 
-## Compare results of home and away team and set set 1 for the winner
-## where is row the home team and column the away team with the index number
-## equal to the factor of the variable.
-for(i in 1:nrow(nflReg)){
-  # Get the position of the current team in the matrix
-  a <- as.numeric(nflReg$Home[i])
-  b <- as.numeric(nflReg$Away[i])
-  
-  # Fill in the values
-  if(nflReg$PtsH[i] > nflReg$PtsA[i]){
-    A[a, b] <- A[a, b] + 1 * w[i] 
-  } else if(nflReg$PtsH[i] < nflReg$PtsA[i]){
-    A[b, a] <- A[b, a] + 1 * w[i]
+# Compute incidence matrix
+# This is not the best way to do it, but it makes it more clear what happens
+
+for(i in 1:nrow(nfl.df)){
+  if(nfl.df$PtsH[i] > nfl.df$PtsA[i]){
+    A[as.numeric(nfl.df$Home[i]), as.numeric(nfl.df$Away[i])] <- 1
+  } else if(nfl.df$PtsH[i] < nfl.df$PtsA[i]){
+    A[as.numeric(nfl.df$Away[i]), as.numeric(nfl.df$Home[i])] <- 1
   } else {
-    A[a, b] <- A[a, b] + 0.5 * w[i]
-    A[b, a] <- A[b, a] + 0.5 * w[i]
+    A[as.numeric(nfl.df$Home[i]), as.numeric(nfl.df$Away[i])] <- 0.5
+    A[as.numeric(nfl.df$Away[i]), as.numeric(nfl.df$Home[i])] <- 0.5
   }
 }
 
-# Colley Calculations
-## Create colley matrix
 colley.m <- -(A + t(A)) + diag(rowSums(A) + colSums(A) + 2)
 
-## Create result data frame
-colley.r <- data_frame(TeamID = levels(sort(nflReg$Home)), # Name of the team
-                       Wins = rowSums(A), # How many wins
-                       Loss = colSums(A), # How many loss
-                       WinP = rowSums(A) / (Wins + Loss), # win-loss ratio
-                       Colley = solve(colley.m, (0.5 * (rowSums(A) - colSums(A)) + 1)) # solved colley equation
-)
-
-# Predict playoff's 
-## Look up the win-loss ratio and the colley ratio and add them to the playoff data frame
-nflPO <- colley.r %>%
-  dplyr::select(TeamID, WinP, Colley) %>%
-  dplyr::left_join(x = nflPO, by = c("Home" = "TeamID"))
-nflPO <- colley.r %>%
-  dplyr::select(TeamID, WinP, Colley) %>%
-  dplyr::left_join(x = nflPO, by = c("Away" = "TeamID"))
-names(nflPO) <- c(names(nfl.df), "WinPH", "ColleyH", "WinPA", "ColleyA") # Update names for better readability
+colley.r <- data_frame(TeamID = levels(sort(nfl.df$Home)),
+                   Wins = rowSums(A),
+                   Loss = colSums(A),
+                   WinP = rowSums(A) / (Wins + Loss),
+                   Colly = solve(colley.m, (0.5 * (rowSums(A) + colSums(A)) + 1))
+                   )
 
 
