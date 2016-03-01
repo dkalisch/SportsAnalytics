@@ -128,6 +128,7 @@ for (i in 1:length(years)) {
   df.games$TOH[!asterisk] <- df.games$TOW[!asterisk]
   df.games$YdsA[!asterisk] <- df.games$YdsL[!asterisk]
   df.games$TOA[!asterisk] <- df.games$TOL[!asterisk]
+  
   ### Remove unessesary columns
   df.games$Col4 <- NULL
   df.games$Col6 <- NULL
