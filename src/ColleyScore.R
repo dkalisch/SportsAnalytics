@@ -27,7 +27,7 @@ library(fBasics) # Havyside function
 
 # Get data
 ## Open connection to data base
-nfl.db <- src_postgres(dbname = "nfl", host = "localhost", user = "nflread", password = "sportsanalytics")
+nfl.db <- src_postgres(dbname = "nfl", host = "localhost", user = "dominik")
 nfl <- tbl(nfl.db, "scores")
 
 ## Request a time frame from the data base
