@@ -2,7 +2,7 @@
 library(dplyr)
 
 # Connect to database
-nfl.db <- src_postgres("nfl")
+nfl.db <- src_postgres("nfl", host = "localhost")
 nfl <- tbl(nfl.db, "scores")
 
 

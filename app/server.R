@@ -232,10 +232,25 @@ shinyServer(function(input, output, session) {
     selectInput("selectTeam", "Please select a team", nfl.teams, multiple = TRUE)
   })
   
-  ## Create a menu to select visulized variable in graph
-  output$selectVar <- renderUI({
-    nfl.vars <- as.character(names(nfl.df.sub.c())[c(-1,-2)])
-    selectInput("selectVar", "Please select a variable", nfl.vars, selected = "Pts")
+  output$selectLocation <- renderUI({
+    selectInput("selectLocation", "Please select which location you want to plot",
+                c("Combined", "Home", "Away"))
+  })
+  
+  dataSource <- reactive({
+    if (is.null(input$selectLocation)) return()
+    switch(input$selectLocation, 
+           "Combined" = nfl.df.sub.c(),
+           "Home" = nfl.df.sub.h(),
+           "Away" = nfl.df.sub.a()
+    )
+  })
+  
+  output$selectYVar <- renderUI({
+    nfl.yvar <- names(dataSource())[c(-1,-2)]
+    selectInput("selectYVar", "Please select a variable",
+                choices = names(dataSource())[c(-1,-2)],
+                selected = names(dataSource())[3])
   })
   
   ## Create a input field for the colley score gamma

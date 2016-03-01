@@ -82,12 +82,17 @@ shinyUI(
           # Tab with the graphical representation of the selected teams
           tabPanel("Graphic",
                    br(),
-                   plotOutput("plot")
+                   plotOutput("plot"),
+                   div(style="display:inline-block",uiOutput("selectLocation")),
+                   div(style="display:inline-block",uiOutput("selectYVar"))
                    #br(),
                    #helpText("Please select variable to be visualized"),
                    #uiOutput("selectVar")
           ),
-                         
+          #tabPanel("Test",
+          #         div(style="display:inline-block",uiOutput("selectLocation")),
+          #         tableOutput("testA")
+          #),           
           # Tab with basic descriptive statistics of the selected teams
           tabPanel("Statistical Summary",
                    h4("Away Statistics"),
