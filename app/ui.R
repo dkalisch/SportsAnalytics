@@ -83,11 +83,11 @@ shinyUI(
           tabPanel("Graphic",
                    br(),
                    plotOutput("plot"),
+                   br(),
+                   helpText("Please select variable to be visualized"),
                    div(style="display:inline-block",uiOutput("selectLocation")),
-                   div(style="display:inline-block",uiOutput("selectYVar"))
-                   #br(),
-                   #helpText("Please select variable to be visualized"),
-                   #uiOutput("selectVar")
+                   div(style="display:inline-block",uiOutput("selectYVar")),
+                   div(style="display:inline-block",uiOutput("selectXVar"))
           ),
           #tabPanel("Test",
           #         div(style="display:inline-block",uiOutput("selectLocation")),

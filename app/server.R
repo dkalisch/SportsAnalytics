@@ -50,14 +50,14 @@ shinyServer(function(input, output, session) {
   nfl.df.sub.a <- reactive({
     nfl.df.sub.a <- nfl.df.sub() %>%
       dplyr::filter(Away %in% input$selectTeam) %>%
-      dplyr::select(Date, Away, PtsA, YdsA, TOA)
+      dplyr::select(Week, Date, Away, PtsA, YdsA, TOA)
   })
   
   ## Get only the home games of the selected teams
   nfl.df.sub.h <- reactive({
     nfl.df.sub.h <- nfl.df.sub() %>%
       dplyr::filter(Home %in% input$selectTeam) %>%
-      dplyr::select(Date, Home, PtsH, YdsH, TOH)
+      dplyr::select(Week, Date, Home, PtsH, YdsH, TOH)
   })
   
   ## Get the combined games of the selected teams
@@ -77,6 +77,20 @@ shinyServer(function(input, output, session) {
   
   ### Combine all home and away games  
   nfl.df.sub.c <- data.frame(rbind(nfl.df.sub.h,nfl.df.sub.a))
+  })
+  
+  ## Get right data for the plot
+  dataSource <- reactive({
+    if (is.null(input$selectLocation)) return()
+    
+    data <- switch(input$selectLocation, 
+           "Combined" = nfl.df.sub.c(),
+           "Home" = nfl.df.sub.h(),
+           "Away" = nfl.df.sub.a()
+    ) %>%
+      dplyr::filter(suppressWarnings(!is.na(as.numeric(Week))))
+    data$Week <- as.numeric(data$Week)
+    return(data)
   })
   
   # Analytics
@@ -147,27 +161,55 @@ shinyServer(function(input, output, session) {
   # Plots
   ## Create a time series plot of the selected data
   output$plot <- renderPlot({
+    validate(need(input$selectYVar, message = FALSE))
+    validate(need(input$selectXVar, message = FALSE))
+    
     ### Define variables and meta indicators
     #y.axis.desc <- subset(hdx.desc()$Description, hdx.desc()$Attribute == 'Units') # Get the unit definition
     title.desc <- paste0("Team performance over time in ", as.numeric(input$selectYear)) # Title based on year selection
     
     #### Create plot
-    p <- ggplot(nfl.df.sub.c(), aes(x = Date, y = Pts, colour = factor(Team), group = Team)) + # Plot definition
+    ##### Create the plot object
+    plot.obj <<- list() # not sure why input$X can not be used directly?
+    plot.obj$data <<- dataSource()
+    plot.obj$x <<- with(plot.obj$data, get(input$selectXVar))
+    plot.obj$y <<- with(plot.obj$data, get(input$selectYVar))
+    plot.obj$group <<- dataSource()[[3]]
+    
+    # Dynamic plotting options - For later use...
+    #plot.type <- switch(input$plot.type,
+    #                  "boxplot" 	= 	geom_boxplot(),
+    #                  "histogram" =	geom_histogram(alpha=0.5,position="identity"),
+    #                  "density" 	=	geom_density(alpha=.75),
+    #                  "bar" 		=	geom_bar(position="dodge")
+    #)
+    
+    ##### Define the plotting theme
+    .theme<- theme(plot.title = element_text(size = rel(1.5), vjust=3),
+                   axis.title = element_text(size = rel(1.2)),
+                   axis.text.x = element_text(size = rel(1.2), angle = 90, hjust = 1),
+                   axis.text.y = element_text(size = rel(1.2)),
+                   legend.position = "bottom",
+                   legend.text = element_text(size = rel(1.2)),
+                   legend.title = element_text(size = rel(1.2))
+                   )
+    
+    ##### Plot the actual graph
+    p <- ggplot(plot.obj$data,
+                aes(x 		= plot.obj$x,
+                    y 		= plot.obj$y,
+                    color = as.factor(plot.obj$group),
+                    group = plot.obj$group
+                    )
+      ) +
       geom_point(size = 3) + # Add points
       geom_line() + # Add line
-      labs(x = NULL, fill = NULL) + # Define axis
-      labs(title = title.desc) + # Define title
-      
-      ##### Design the plot
-      guides(colour = guide_legend(title = 'Team', ncol = 3)) +
-      theme(plot.title = element_text(size = rel(1.5), vjust=3),
-            axis.title = element_text(size = rel(1.2)),
-            axis.text.x = element_text(size = rel(1.2), angle = 90, hjust = 1),
-            axis.text.y = element_text(size = rel(1.2)),
-            legend.position = "bottom",
-            legend.text = element_text(size = rel(1.2)),
-            legend.title = element_text(size = rel(1.2))
-      )
+      labs(title = title.desc, # Define title
+           y = input$selectYVar, # Define y-axis
+           x = NULL, # Define y-axis
+           fill = NULL) +
+      guides(colour = guide_legend(title = 'Team', ncol = 3)) + # Define legend
+      .theme
     
     #### Return plot
     print(p)
@@ -232,25 +274,23 @@ shinyServer(function(input, output, session) {
     selectInput("selectTeam", "Please select a team", nfl.teams, multiple = TRUE)
   })
   
+  ## Create a menu to select location for the plot
   output$selectLocation <- renderUI({
-    selectInput("selectLocation", "Please select which location you want to plot",
+    selectInput("selectLocation", "Location",
                 c("Combined", "Home", "Away"))
   })
   
-  dataSource <- reactive({
-    if (is.null(input$selectLocation)) return()
-    switch(input$selectLocation, 
-           "Combined" = nfl.df.sub.c(),
-           "Home" = nfl.df.sub.h(),
-           "Away" = nfl.df.sub.a()
-    )
+  ## Create a menu to select y-axis variable to be plotted
+  output$selectYVar <- renderUI({
+    selectInput("selectYVar", "Variable",
+                choices = names(dataSource())[-c(1:3)],
+                selected = names(dataSource())[4])
   })
   
-  output$selectYVar <- renderUI({
-    nfl.yvar <- names(dataSource())[c(-1,-2)]
-    selectInput("selectYVar", "Please select a variable",
-                choices = names(dataSource())[c(-1,-2)],
-                selected = names(dataSource())[3])
+  ## Create a menu to select location for the plot
+  output$selectXVar <- renderUI({
+    selectInput("selectXVar", "Reference",
+                c("Week", "Date"))
   })
   
   ## Create a input field for the colley score gamma
